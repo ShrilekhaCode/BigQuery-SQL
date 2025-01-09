@@ -1,0 +1,1706 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "c3456cc2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006141,
+     "end_time": "2025-01-09T19:14:53.282064",
+     "exception": false,
+     "start_time": "2025-01-09T19:14:53.275923",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "**This notebook is an exercise in the [SQL](https://www.kaggle.com/learn/intro-to-sql) course.  You can reference the tutorial at [this link](https://www.kaggle.com/dansbecker/joining-data).**\n",
+    "\n",
+    "---\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "50b42c87",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00531,
+     "end_time": "2025-01-09T19:14:53.293164",
+     "exception": false,
+     "start_time": "2025-01-09T19:14:53.287854",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Introduction\n",
+    "\n",
+    "[Stack Overflow](https://stackoverflow.com/) is a widely beloved question and answer site for technical questions. You'll probably use it yourself as you keep using SQL (or any programming language). \n",
+    "\n",
+    "Their data is publicly available. What cool things do you think it would be useful for?\n",
+    "\n",
+    "Here's one idea:\n",
+    "You could set up a service that identifies the Stack Overflow users who have demonstrated expertise with a specific technology by answering related questions about it, so someone could hire those experts for in-depth help.\n",
+    "\n",
+    "In this exercise, you'll write the SQL queries that might serve as the foundation for this type of service.\n",
+    "\n",
+    "As usual, run the following cell to set up our feedback system before moving on."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "5844174e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:14:53.305988Z",
+     "iopub.status.busy": "2025-01-09T19:14:53.305607Z",
+     "iopub.status.idle": "2025-01-09T19:15:50.165178Z",
+     "shell.execute_reply": "2025-01-09T19:15:50.163879Z"
+    },
+    "papermill": {
+     "duration": 56.868507,
+     "end_time": "2025-01-09T19:15:50.167103",
+     "exception": false,
+     "start_time": "2025-01-09T19:14:53.298596",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Collecting git+https://github.com/JohnM-TX/learntools.git\r\n",
+      "  Cloning https://github.com/JohnM-TX/learntools.git to /tmp/pip-req-build-m5fiodun\r\n",
+      "  Running command git clone --filter=blob:none --quiet https://github.com/JohnM-TX/learntools.git /tmp/pip-req-build-m5fiodun\r\n",
+      "  Resolved https://github.com/JohnM-TX/learntools.git to commit 8132ca6d9caea0d40105d820bbc260d1abe0d112\r\n",
+      "  Preparing metadata (setup.py) ... \u001b[?25l\u001b[?25hdone\r\n",
+      "Building wheels for collected packages: learntools\r\n",
+      "  Building wheel for learntools (setup.py) ... \u001b[?25l\u001b[?25hdone\r\n",
+      "  Created wheel for learntools: filename=learntools-0.3.4-py3-none-any.whl size=269000 sha256=503ef91fcfd9a128b05f5b8b22a47b0152f83ced3b4d7a37d39a46e73a551fce\r\n",
+      "  Stored in directory: /tmp/pip-ephem-wheel-cache-k7jt2xbu/wheels/fb/73/6b/80434cee9d209d52636fc2c4522ec5e151956adece671d18e9\r\n",
+      "Successfully built learntools\r\n",
+      "Installing collected packages: learntools\r\n",
+      "Successfully installed learntools-0.3.4\r\n",
+      "Using Kaggle's public dataset BigQuery integration.\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.10/dist-packages/google/cloud/bigquery/table.py:1727: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.\n",
+      "  warnings.warn(\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Using Kaggle's public dataset BigQuery integration.\n",
+      "Setup Complete\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Set up feedback system\n",
+    "!pip install -U -t /kaggle/working/ git+https://github.com/JohnM-TX/learntools.git\n",
+    "from learntools.core import binder\n",
+    "binder.bind(globals())\n",
+    "from learntools.sql.ex6 import *\n",
+    "from learntools.sql.ex5 import *\n",
+    "print(\"Setup Complete\")\n",
+    "#/kaggle/working/learntools-0.3.4.dist-info\n",
+    "#/kaggle/working/learntools"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9a36843c",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005754,
+     "end_time": "2025-01-09T19:15:50.179262",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:50.173508",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Run the next cell to fetch the `stackoverflow` dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "b8ddf259",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:50.192945Z",
+     "iopub.status.busy": "2025-01-09T19:15:50.192376Z",
+     "iopub.status.idle": "2025-01-09T19:15:50.628025Z",
+     "shell.execute_reply": "2025-01-09T19:15:50.626861Z"
+    },
+    "papermill": {
+     "duration": 0.444792,
+     "end_time": "2025-01-09T19:15:50.630083",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:50.185291",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Using Kaggle's public dataset BigQuery integration.\n"
+     ]
+    }
+   ],
+   "source": [
+    "from google.cloud import bigquery\n",
+    "\n",
+    "# Create a \"Client\" object\n",
+    "client = bigquery.Client()\n",
+    "\n",
+    "# Construct a reference to the \"stackoverflow\" dataset\n",
+    "dataset_ref = client.dataset(\"stackoverflow\", project=\"bigquery-public-data\")\n",
+    "\n",
+    "# API request - fetch the dataset\n",
+    "dataset = client.get_dataset(dataset_ref)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f131c341",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00606,
+     "end_time": "2025-01-09T19:15:50.642610",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:50.636550",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Exercises\n",
+    "\n",
+    "### 1) Explore the data\n",
+    "\n",
+    "Before writing queries or **JOIN** clauses, you'll want to see what tables are available. \n",
+    "\n",
+    "*Hint*: Tab completion is helpful whenever you can't remember a command. Type `client.` and then hit the tab key. Don't forget the period before hitting tab."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "252abea7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:50.656314Z",
+     "iopub.status.busy": "2025-01-09T19:15:50.655905Z",
+     "iopub.status.idle": "2025-01-09T19:15:51.569016Z",
+     "shell.execute_reply": "2025-01-09T19:15:51.567943Z"
+    },
+    "papermill": {
+     "duration": 0.922011,
+     "end_time": "2025-01-09T19:15:51.570675",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:50.648664",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['badges', 'comments', 'post_history', 'post_links', 'posts_answers', 'posts_moderator_nomination', 'posts_orphaned_tag_wiki', 'posts_privilege_wiki', 'posts_questions', 'posts_tag_wiki', 'posts_tag_wiki_excerpt', 'posts_wiki_placeholder', 'stackoverflow_posts', 'tags', 'users', 'votes']\n"
+     ]
+    },
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 4, \"interactionType\": 1, \"questionType\": 1, \"questionId\": \"1_GetTableName\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#ccaa33\">Check:</span> When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `table_name`"
+      ],
+      "text/plain": [
+       "Check: When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `table_name`"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Get a list of available tables \n",
+    "list_of_tables = [table.table_id for table in list(client.list_tables(dataset))] # Your code here\n",
+    "\n",
+    "# Print your answer\n",
+    "print(list_of_tables)\n",
+    "\n",
+    "# Check your answer\n",
+    "q_1.check()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "907ee4af",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006145,
+     "end_time": "2025-01-09T19:15:51.583455",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:51.577310",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For the solution, uncomment the line below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "a4bbca14",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:51.598103Z",
+     "iopub.status.busy": "2025-01-09T19:15:51.597725Z",
+     "iopub.status.idle": "2025-01-09T19:15:51.602015Z",
+     "shell.execute_reply": "2025-01-09T19:15:51.600824Z"
+    },
+    "papermill": {
+     "duration": 0.0141,
+     "end_time": "2025-01-09T19:15:51.603814",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:51.589714",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "#q_1.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8c160323",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006158,
+     "end_time": "2025-01-09T19:15:51.616650",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:51.610492",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 2) Review relevant tables\n",
+    "\n",
+    "If you are interested in people who answer questions on a given topic, the `posts_answers` table is a natural place to look. Run the following cell, and look at the output."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "4d56ad30",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:51.631192Z",
+     "iopub.status.busy": "2025-01-09T19:15:51.630804Z",
+     "iopub.status.idle": "2025-01-09T19:15:53.901627Z",
+     "shell.execute_reply": "2025-01-09T19:15:53.900386Z"
+    },
+    "papermill": {
+     "duration": 2.28081,
+     "end_time": "2025-01-09T19:15:53.903862",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:51.623052",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>id</th>\n",
+       "      <th>title</th>\n",
+       "      <th>body</th>\n",
+       "      <th>accepted_answer_id</th>\n",
+       "      <th>answer_count</th>\n",
+       "      <th>comment_count</th>\n",
+       "      <th>community_owned_date</th>\n",
+       "      <th>creation_date</th>\n",
+       "      <th>favorite_count</th>\n",
+       "      <th>last_activity_date</th>\n",
+       "      <th>last_edit_date</th>\n",
+       "      <th>last_editor_display_name</th>\n",
+       "      <th>last_editor_user_id</th>\n",
+       "      <th>owner_display_name</th>\n",
+       "      <th>owner_user_id</th>\n",
+       "      <th>parent_id</th>\n",
+       "      <th>post_type_id</th>\n",
+       "      <th>score</th>\n",
+       "      <th>tags</th>\n",
+       "      <th>view_count</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>18</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;p&gt;For a table like this:&lt;/p&gt;\\n\\n&lt;pre&gt;&lt;code&gt;CR...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-08-01 05:12:44.193000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2016-06-02 05:56:26.060000+00:00</td>\n",
+       "      <td>2016-06-02 05:56:26.060000+00:00</td>\n",
+       "      <td>Jeff Atwood</td>\n",
+       "      <td>126039</td>\n",
+       "      <td>phpguy</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>17</td>\n",
+       "      <td>2</td>\n",
+       "      <td>59</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>165</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;p&gt;You can use a &lt;a href=\"http://sharpdevelop....</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-08-01 18:04:25.023000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2019-04-06 14:03:51.080000+00:00</td>\n",
+       "      <td>2019-04-06 14:03:51.080000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1721793</td>\n",
+       "      <td>user2189331</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>145</td>\n",
+       "      <td>2</td>\n",
+       "      <td>10</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1028</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;p&gt;The VB code looks something like this:&lt;/p&gt;\\...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-08-04 04:58:40.300000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2013-02-07 13:22:14.680000+00:00</td>\n",
+       "      <td>2013-02-07 13:22:14.680000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>395659</td>\n",
+       "      <td>user2189331</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>947</td>\n",
+       "      <td>2</td>\n",
+       "      <td>8</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>1073</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;p&gt;My first choice would be a dedicated heap t...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-08-04 07:51:02.997000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2015-09-01 17:32:32.120000+00:00</td>\n",
+       "      <td>2015-09-01 17:32:32.120000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>45459</td>\n",
+       "      <td>user2189331</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>1069</td>\n",
+       "      <td>2</td>\n",
+       "      <td>29</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>1260</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;p&gt;I found the answer. all you have to do is a...</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-08-04 14:06:02.863000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>2016-12-20 08:38:48.867000+00:00</td>\n",
+       "      <td>2016-12-20 08:38:48.867000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1221571</td>\n",
+       "      <td>Jin</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>1229</td>\n",
+       "      <td>2</td>\n",
+       "      <td>1</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "     id title                                               body  \\\n",
+       "0    18  None  <p>For a table like this:</p>\\n\\n<pre><code>CR...   \n",
+       "1   165  None  <p>You can use a <a href=\"http://sharpdevelop....   \n",
+       "2  1028  None  <p>The VB code looks something like this:</p>\\...   \n",
+       "3  1073  None  <p>My first choice would be a dedicated heap t...   \n",
+       "4  1260  None  <p>I found the answer. all you have to do is a...   \n",
+       "\n",
+       "  accepted_answer_id answer_count  comment_count community_owned_date  \\\n",
+       "0               None         None              2                  NaT   \n",
+       "1               None         None              0                  NaT   \n",
+       "2               None         None              0                  NaT   \n",
+       "3               None         None              0                  NaT   \n",
+       "4               None         None              0                  NaT   \n",
+       "\n",
+       "                     creation_date favorite_count  \\\n",
+       "0 2008-08-01 05:12:44.193000+00:00           None   \n",
+       "1 2008-08-01 18:04:25.023000+00:00           None   \n",
+       "2 2008-08-04 04:58:40.300000+00:00           None   \n",
+       "3 2008-08-04 07:51:02.997000+00:00           None   \n",
+       "4 2008-08-04 14:06:02.863000+00:00           None   \n",
+       "\n",
+       "                last_activity_date                   last_edit_date  \\\n",
+       "0 2016-06-02 05:56:26.060000+00:00 2016-06-02 05:56:26.060000+00:00   \n",
+       "1 2019-04-06 14:03:51.080000+00:00 2019-04-06 14:03:51.080000+00:00   \n",
+       "2 2013-02-07 13:22:14.680000+00:00 2013-02-07 13:22:14.680000+00:00   \n",
+       "3 2015-09-01 17:32:32.120000+00:00 2015-09-01 17:32:32.120000+00:00   \n",
+       "4 2016-12-20 08:38:48.867000+00:00 2016-12-20 08:38:48.867000+00:00   \n",
+       "\n",
+       "  last_editor_display_name  last_editor_user_id owner_display_name  \\\n",
+       "0              Jeff Atwood               126039             phpguy   \n",
+       "1                     None              1721793        user2189331   \n",
+       "2                     None               395659        user2189331   \n",
+       "3                     None                45459        user2189331   \n",
+       "4                     None              1221571                Jin   \n",
+       "\n",
+       "   owner_user_id  parent_id  post_type_id  score  tags view_count  \n",
+       "0           <NA>         17             2     59  None       None  \n",
+       "1           <NA>        145             2     10  None       None  \n",
+       "2           <NA>        947             2      8  None       None  \n",
+       "3           <NA>       1069             2     29  None       None  \n",
+       "4           <NA>       1229             2      1  None       None  "
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Construct a reference to the \"posts_answers\" table\n",
+    "answers_table_ref = dataset_ref.table(\"posts_answers\")\n",
+    "\n",
+    "# API request - fetch the table\n",
+    "answers_table = client.get_table(answers_table_ref)\n",
+    "\n",
+    "# Preview the first five lines of the \"posts_answers\" table\n",
+    "client.list_rows(answers_table, max_results=5).to_dataframe()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1a458063",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007034,
+     "end_time": "2025-01-09T19:15:53.917843",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:53.910809",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "It isn't clear yet how to find users who answered questions on any given topic. But `posts_answers` has a `parent_id` column. If you are familiar with the Stack Overflow site, you might figure out that the `parent_id` is the question each post is answering.\n",
+    "\n",
+    "Look at `posts_questions` using the cell below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "0a22ca46",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:53.932520Z",
+     "iopub.status.busy": "2025-01-09T19:15:53.932176Z",
+     "iopub.status.idle": "2025-01-09T19:15:56.193056Z",
+     "shell.execute_reply": "2025-01-09T19:15:56.192024Z"
+    },
+    "papermill": {
+     "duration": 2.270051,
+     "end_time": "2025-01-09T19:15:56.194690",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:53.924639",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>id</th>\n",
+       "      <th>title</th>\n",
+       "      <th>body</th>\n",
+       "      <th>accepted_answer_id</th>\n",
+       "      <th>answer_count</th>\n",
+       "      <th>comment_count</th>\n",
+       "      <th>community_owned_date</th>\n",
+       "      <th>creation_date</th>\n",
+       "      <th>favorite_count</th>\n",
+       "      <th>last_activity_date</th>\n",
+       "      <th>last_edit_date</th>\n",
+       "      <th>last_editor_display_name</th>\n",
+       "      <th>last_editor_user_id</th>\n",
+       "      <th>owner_display_name</th>\n",
+       "      <th>owner_user_id</th>\n",
+       "      <th>parent_id</th>\n",
+       "      <th>post_type_id</th>\n",
+       "      <th>score</th>\n",
+       "      <th>tags</th>\n",
+       "      <th>view_count</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>320268</td>\n",
+       "      <td>Html.ActionLink doesn’t render # properly</td>\n",
+       "      <td>&lt;p&gt;When using Html.ActionLink passing a string...</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-11-26 10:42:37.477000+00:00</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2009-02-06 20:13:54.370000+00:00</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>Paulo</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>asp.net-mvc</td>\n",
+       "      <td>390</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>324003</td>\n",
+       "      <td>Primitive recursion</td>\n",
+       "      <td>&lt;p&gt;how  will i define the function 'simplify' ...</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-11-27 15:12:37.497000+00:00</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2012-09-25 19:54:40.597000+00:00</td>\n",
+       "      <td>2012-09-25 19:54:40.597000+00:00</td>\n",
+       "      <td>Marcin</td>\n",
+       "      <td>1288</td>\n",
+       "      <td>None</td>\n",
+       "      <td>41000</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>haskell|lambda|functional-programming|lambda-c...</td>\n",
+       "      <td>497</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>390605</td>\n",
+       "      <td>While vs. Do While</td>\n",
+       "      <td>&lt;p&gt;I've seen both the blocks of code in use se...</td>\n",
+       "      <td>390608</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2008-12-24 01:49:54.230000+00:00</td>\n",
+       "      <td>2</td>\n",
+       "      <td>2008-12-24 03:08:55.897000+00:00</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>None</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>Unkwntech</td>\n",
+       "      <td>115</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>language-agnostic|loops</td>\n",
+       "      <td>11262</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>413246</td>\n",
+       "      <td>Protect ASP.NET Source code</td>\n",
+       "      <td>&lt;p&gt;Im currently doing some research in how to ...</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2009-01-05 14:23:51.040000+00:00</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2009-03-24 21:30:22.370000+00:00</td>\n",
+       "      <td>2009-01-05 14:42:28.257000+00:00</td>\n",
+       "      <td>Tom Anderson</td>\n",
+       "      <td>13502</td>\n",
+       "      <td>Velnias</td>\n",
+       "      <td>&lt;NA&gt;</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>asp.net|deployment|obfuscation</td>\n",
+       "      <td>4823</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>454921</td>\n",
+       "      <td>Difference between \"int[] myArray\" and \"int my...</td>\n",
+       "      <td>&lt;blockquote&gt;\\n  &lt;p&gt;&lt;strong&gt;Possible Duplicate:...</td>\n",
+       "      <td>454928</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>NaT</td>\n",
+       "      <td>2009-01-18 10:22:52.177000+00:00</td>\n",
+       "      <td>0</td>\n",
+       "      <td>2009-01-18 10:30:50.930000+00:00</td>\n",
+       "      <td>2017-05-23 11:49:26.567000+00:00</td>\n",
+       "      <td>None</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>Evan Fosmark</td>\n",
+       "      <td>49701</td>\n",
+       "      <td>None</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>java|arrays</td>\n",
+       "      <td>798</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       id                                              title  \\\n",
+       "0  320268          Html.ActionLink doesn’t render # properly   \n",
+       "1  324003                                Primitive recursion   \n",
+       "2  390605                                 While vs. Do While   \n",
+       "3  413246                        Protect ASP.NET Source code   \n",
+       "4  454921  Difference between \"int[] myArray\" and \"int my...   \n",
+       "\n",
+       "                                                body  accepted_answer_id  \\\n",
+       "0  <p>When using Html.ActionLink passing a string...                <NA>   \n",
+       "1  <p>how  will i define the function 'simplify' ...                <NA>   \n",
+       "2  <p>I've seen both the blocks of code in use se...              390608   \n",
+       "3  <p>Im currently doing some research in how to ...                <NA>   \n",
+       "4  <blockquote>\\n  <p><strong>Possible Duplicate:...              454928   \n",
+       "\n",
+       "   answer_count  comment_count community_owned_date  \\\n",
+       "0             0              0                  NaT   \n",
+       "1             0              0                  NaT   \n",
+       "2             0              0                  NaT   \n",
+       "3             0              0                  NaT   \n",
+       "4             0              0                  NaT   \n",
+       "\n",
+       "                     creation_date  favorite_count  \\\n",
+       "0 2008-11-26 10:42:37.477000+00:00               0   \n",
+       "1 2008-11-27 15:12:37.497000+00:00               0   \n",
+       "2 2008-12-24 01:49:54.230000+00:00               2   \n",
+       "3 2009-01-05 14:23:51.040000+00:00               0   \n",
+       "4 2009-01-18 10:22:52.177000+00:00               0   \n",
+       "\n",
+       "                last_activity_date                   last_edit_date  \\\n",
+       "0 2009-02-06 20:13:54.370000+00:00                              NaT   \n",
+       "1 2012-09-25 19:54:40.597000+00:00 2012-09-25 19:54:40.597000+00:00   \n",
+       "2 2008-12-24 03:08:55.897000+00:00                              NaT   \n",
+       "3 2009-03-24 21:30:22.370000+00:00 2009-01-05 14:42:28.257000+00:00   \n",
+       "4 2009-01-18 10:30:50.930000+00:00 2017-05-23 11:49:26.567000+00:00   \n",
+       "\n",
+       "  last_editor_display_name  last_editor_user_id owner_display_name  \\\n",
+       "0                     None                 <NA>              Paulo   \n",
+       "1                   Marcin                 1288               None   \n",
+       "2                     None                 <NA>          Unkwntech   \n",
+       "3             Tom Anderson                13502            Velnias   \n",
+       "4                     None                   -1       Evan Fosmark   \n",
+       "\n",
+       "   owner_user_id parent_id  post_type_id  score  \\\n",
+       "0           <NA>      None             1      0   \n",
+       "1          41000      None             1      0   \n",
+       "2            115      None             1      0   \n",
+       "3           <NA>      None             1      0   \n",
+       "4          49701      None             1      0   \n",
+       "\n",
+       "                                                tags  view_count  \n",
+       "0                                        asp.net-mvc         390  \n",
+       "1  haskell|lambda|functional-programming|lambda-c...         497  \n",
+       "2                            language-agnostic|loops       11262  \n",
+       "3                     asp.net|deployment|obfuscation        4823  \n",
+       "4                                        java|arrays         798  "
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Construct a reference to the \"posts_questions\" table\n",
+    "questions_table_ref = dataset_ref.table(\"posts_questions\")\n",
+    "\n",
+    "# API request - fetch the table\n",
+    "questions_table = client.get_table(questions_table_ref)\n",
+    "\n",
+    "# Preview the first five lines of the \"posts_questions\" table\n",
+    "client.list_rows(questions_table, max_results=5).to_dataframe()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8b714708",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007343,
+     "end_time": "2025-01-09T19:15:56.209297",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:56.201954",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Are there any fields that identify what topic or technology each question is about? If so, how could you find the IDs of users who answered questions about a specific topic?\n",
+    "\n",
+    "Think about it, and then check the solution by running the code in the next cell."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "c24f47f4",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:56.225087Z",
+     "iopub.status.busy": "2025-01-09T19:15:56.224736Z",
+     "iopub.status.idle": "2025-01-09T19:15:56.232386Z",
+     "shell.execute_reply": "2025-01-09T19:15:56.231418Z"
+    },
+    "papermill": {
+     "duration": 0.017812,
+     "end_time": "2025-01-09T19:15:56.234191",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:56.216379",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 3, \"questionType\": 4, \"questionId\": \"2_WhatsWrongWithData\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#33cc99\">Solution:</span> \n",
+       "You can see the data by calling: \n",
+       "```python\n",
+       "# Construct a reference to the \"taxi_trips\" table\n",
+       "table_ref = dataset_ref.table(\"taxi_trips\")\n",
+       "\n",
+       "# API request - fetch the table\n",
+       "table = client.get_table(table_ref)\n",
+       "\n",
+       "# Preview the first five lines of the \"taxi_trips\" table\n",
+       "client.list_rows(table, max_results=5).to_dataframe()\n",
+       "```\n",
+       "\n",
+       "Some location fields have values of `None` or `NaN`. That is a problem if we want to use those fields.\n"
+      ],
+      "text/plain": [
+       "Solution: \n",
+       "You can see the data by calling: \n",
+       "```python\n",
+       "# Construct a reference to the \"taxi_trips\" table\n",
+       "table_ref = dataset_ref.table(\"taxi_trips\")\n",
+       "\n",
+       "# API request - fetch the table\n",
+       "table = client.get_table(table_ref)\n",
+       "\n",
+       "# Preview the first five lines of the \"taxi_trips\" table\n",
+       "client.list_rows(table, max_results=5).to_dataframe()\n",
+       "```\n",
+       "\n",
+       "Some location fields have values of `None` or `NaN`. That is a problem if we want to use those fields."
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Check your answer (Run this code cell to receive credit!)\n",
+    "\n",
+    "q_2.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7c5968e5",
+   "metadata": {
+    "papermill": {
+     "duration": 0.0071,
+     "end_time": "2025-01-09T19:15:56.248881",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:56.241781",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 3) Selecting the right questions\n",
+    "\n",
+    "A lot of this data is text. \n",
+    "\n",
+    "We'll explore one last technique in this course which you can apply to this text.\n",
+    "\n",
+    "A **WHERE** clause can limit your results to rows with certain text using the **LIKE** feature. For example, to select just the third row of the `pets` table from the tutorial, we could use the query in the picture below.\n",
+    "\n",
+    "![](https://storage.googleapis.com/kaggle-media/learn/images/RccsXBr.png) \n",
+    "\n",
+    "You can also use `%` as a \"wildcard\" for any number of characters. So you can also get the third row with:\n",
+    "\n",
+    "```\n",
+    "query = \"\"\"\n",
+    "        SELECT * \n",
+    "        FROM `bigquery-public-data.pet_records.pets` \n",
+    "        WHERE Name LIKE '%ipl%'\n",
+    "        \"\"\"\n",
+    "```\n",
+    "\n",
+    "Try this yourself. Write a query that selects the `id`, `title` and `owner_user_id` columns from the `posts_questions` table. \n",
+    "- Restrict the results to rows that contain the word \"bigquery\" in the `tags` column. \n",
+    "- Include rows where there is other text in addition to the word \"bigquery\" (e.g., if a row has a tag \"bigquery-sql\", your results should include that too)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "86b70f06",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:15:56.265058Z",
+     "iopub.status.busy": "2025-01-09T19:15:56.264638Z",
+     "iopub.status.idle": "2025-01-09T19:16:03.195918Z",
+     "shell.execute_reply": "2025-01-09T19:16:03.194954Z"
+    },
+    "papermill": {
+     "duration": 6.941735,
+     "end_time": "2025-01-09T19:16:03.197787",
+     "exception": false,
+     "start_time": "2025-01-09T19:15:56.256052",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.10/dist-packages/google/cloud/bigquery/table.py:1727: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.\n",
+      "  warnings.warn(\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "         id                                              title  owner_user_id\n",
+      "0  73387570        Data loss after billing changed in bigquery       19784500\n",
+      "1  73474242  Sum of repeated numeric columns (array) in Big...       12018883\n",
+      "2  73521676  Is there any way we can pass avro schema file ...       19865820\n",
+      "3  73355665    Converting seconds to time duration in BigQuery       15200064\n",
+      "4  73377293  How to write data to bq using streaming with a...       19777578\n"
+     ]
+    },
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 4, \"interactionType\": 1, \"questionType\": 2, \"questionId\": \"3_YearDistrib\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#ccaa33\">Check:</span> When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `rides_per_year_result`"
+      ],
+      "text/plain": [
+       "Check: When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `rides_per_year_result`"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Your code here\n",
+    "questions_query = \"\"\"\n",
+    "                  SELECT id, title , owner_user_id\n",
+    "                  FROM `bigquery-public-data.stackoverflow.posts_questions`\n",
+    "                  WHERE tags LIKE '%bigquery%'\n",
+    "                  \"\"\"\n",
+    "\n",
+    "# Set up the query (cancel the query if it would use too much of \n",
+    "# your quota, with the limit set to 1 GB)\n",
+    "safe_config = bigquery.QueryJobConfig(maximum_bytes_billed=10**10)\n",
+    "questions_query_job = client.query(questions_query, job_config = safe_config) # Your code goes here\n",
+    "\n",
+    "# API request - run the query, and return a pandas DataFrame\n",
+    "questions_results = questions_query_job.to_dataframe() # Your code goes here\n",
+    "\n",
+    "# Preview results\n",
+    "print(questions_results.head())\n",
+    "\n",
+    "# Check your answer\n",
+    "q_3.check()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "114a7632",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007816,
+     "end_time": "2025-01-09T19:16:03.213570",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:03.205754",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For a hint or the solution, uncomment the appropriate line below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "00423441",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:03.230586Z",
+     "iopub.status.busy": "2025-01-09T19:16:03.230241Z",
+     "iopub.status.idle": "2025-01-09T19:16:03.234186Z",
+     "shell.execute_reply": "2025-01-09T19:16:03.233186Z"
+    },
+    "papermill": {
+     "duration": 0.014472,
+     "end_time": "2025-01-09T19:16:03.236010",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:03.221538",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "#q_3.hint()\n",
+    "#q_3.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "614749c8",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007404,
+     "end_time": "2025-01-09T19:16:03.251665",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:03.244261",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 4) Your first join\n",
+    "Now that you have a query to select questions on any given topic (in this case, you chose \"bigquery\"), you can find the answers to those questions with a **JOIN**.  \n",
+    "\n",
+    "Write a query that returns the `id`, `body` and `owner_user_id` columns from the `posts_answers` table for answers to \"bigquery\"-related questions. \n",
+    "- You should have one row in your results for each answer to a question that has \"bigquery\" in the tags.  \n",
+    "- Remember you can get the tags for a question from the `tags` column in the `posts_questions` table.\n",
+    "\n",
+    "Here's a reminder of what a **JOIN** looked like in the tutorial:\n",
+    "```\n",
+    "query = \"\"\"\n",
+    "        SELECT p.Name AS Pet_Name, o.Name AS Owner_Name\n",
+    "        FROM `bigquery-public-data.pet_records.pets` as p\n",
+    "        INNER JOIN `bigquery-public-data.pet_records.owners` as o \n",
+    "            ON p.ID = o.Pet_ID\n",
+    "        \"\"\"\n",
+    "```\n",
+    "\n",
+    "It may be useful to scroll up and review the first several rows of the `posts_answers` and `posts_questions` tables.  "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "e4504019",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:03.269269Z",
+     "iopub.status.busy": "2025-01-09T19:16:03.268845Z",
+     "iopub.status.idle": "2025-01-09T19:16:26.268728Z",
+     "shell.execute_reply": "2025-01-09T19:16:26.267618Z"
+    },
+    "papermill": {
+     "duration": 23.011181,
+     "end_time": "2025-01-09T19:16:26.270458",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:03.259277",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.10/dist-packages/google/cloud/bigquery/table.py:1727: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.\n",
+      "  warnings.warn(\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "         id                                               body  owner_user_id\n",
+      "0  22558866  <p>My Query for the above image ios </p>\\n\\n<p...        3312361\n",
+      "1  22832534  <p>The solution for this type of problem is.Cr...        1738558\n",
+      "2  22877839  <p>I am not sure the 2MB JSON limit is accurat...        2818214\n",
+      "3  22883115  <p>I found a solution here:\\n<a href=\"https://...        1607103\n",
+      "4  22701654  <p>Don't know if you are still looking for an ...        1392458\n"
+     ]
+    },
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 4, \"interactionType\": 1, \"questionType\": 2, \"questionId\": \"4_MonthDistrib\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#ccaa33\">Check:</span> When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `rides_per_month_result`"
+      ],
+      "text/plain": [
+       "Check: When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `rides_per_month_result`"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Your code here\n",
+    "answers_query = \"\"\"\n",
+    "                SELECT A.id, A.body, A.owner_user_id \n",
+    "                FROM `bigquery-public-data.stackoverflow.posts_answers` AS A\n",
+    "                INNER JOIN `bigquery-public-data.stackoverflow.posts_questions` AS B\n",
+    "                ON A.parent_id = B.id\n",
+    "                WHERE B.tags LIKE '%bigquery%'\n",
+    "                \"\"\"\n",
+    "\n",
+    "# Set up the query\n",
+    "safe_config = bigquery.QueryJobConfig(maximum_bytes_billed=27*10**10)\n",
+    "answers_query_job = client.query(answers_query, job_config = safe_config) # Your code goes here\n",
+    "\n",
+    "# API request - run the query, and return a pandas DataFrame\n",
+    "answers_results = answers_query_job.to_dataframe() # Your code goes here\n",
+    "\n",
+    "# Preview results\n",
+    "print(answers_results.head())\n",
+    "\n",
+    "# Check your answer\n",
+    "q_4.check()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "95ceb84e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00764,
+     "end_time": "2025-01-09T19:16:26.286336",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:26.278696",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For a hint or the solution, uncomment the appropriate line below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "82fcb0da",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:26.303926Z",
+     "iopub.status.busy": "2025-01-09T19:16:26.303587Z",
+     "iopub.status.idle": "2025-01-09T19:16:26.307710Z",
+     "shell.execute_reply": "2025-01-09T19:16:26.306540Z"
+    },
+    "papermill": {
+     "duration": 0.0154,
+     "end_time": "2025-01-09T19:16:26.309778",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:26.294378",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "#q_4.hint()\n",
+    "#q_4.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d4db6008",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008107,
+     "end_time": "2025-01-09T19:16:26.326332",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:26.318225",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 5) Answer the question\n",
+    "You have the merge you need. But you want a list of users who have answered many questions... which requires more work beyond your previous result.\n",
+    "\n",
+    "Write a new query that has a single row for each user who answered at least one question with a tag that includes the string \"bigquery\". Your results should have two columns:\n",
+    "- `user_id` - contains the `owner_user_id` column from the `posts_answers` table\n",
+    "- `number_of_answers` - contains the number of answers the user has written to \"bigquery\"-related questions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "42d4bc14",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:26.344216Z",
+     "iopub.status.busy": "2025-01-09T19:16:26.343832Z",
+     "iopub.status.idle": "2025-01-09T19:16:28.948291Z",
+     "shell.execute_reply": "2025-01-09T19:16:28.947220Z"
+    },
+    "papermill": {
+     "duration": 2.615195,
+     "end_time": "2025-01-09T19:16:28.949854",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:26.334659",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.10/dist-packages/google/cloud/bigquery/table.py:1727: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.\n",
+      "  warnings.warn(\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "       user_id  number_of_answers\n",
+      "0      5221944               5203\n",
+      "1      1144035               1634\n",
+      "2       132438                898\n",
+      "3      6253347                737\n",
+      "4      1366527                620\n",
+      "...        ...                ...\n",
+      "6366   1557281                  1\n",
+      "6367   4570698                  1\n",
+      "6368  13877602                  1\n",
+      "6369    315663                  1\n",
+      "6370   6865864                  1\n",
+      "\n",
+      "[6371 rows x 2 columns]\n",
+      "   user_id  number_of_answers\n",
+      "0  5221944               5203\n",
+      "1  1144035               1634\n",
+      "2   132438                898\n",
+      "3  6253347                737\n",
+      "4  1366527                620\n"
+     ]
+    },
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"outcomeType\": 4, \"interactionType\": 1, \"questionType\": 2, \"questionId\": \"5_TheLongQuery\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\"}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#ccaa33\">Check:</span> When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `speeds_result`"
+      ],
+      "text/plain": [
+       "Check: When you've updated the starter code, `check()` will tell you whether your code is correct. Remember, you must create the following variable: `speeds_result`"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Your code here\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "\n",
+    "bigquery_experts_query = \"\"\"\n",
+    "                         SELECT a.owner_user_id AS user_id, COUNT(1) AS number_of_answers\n",
+    "                         FROM `bigquery-public-data.stackoverflow.posts_questions` AS q\n",
+    "                         INNER JOIN `bigquery-public-data.stackoverflow.posts_answers` AS a\n",
+    "                         ON q.id = a.parent_Id\n",
+    "                         WHERE q.tags LIKE '%bigquery%'\n",
+    "                         GROUP BY a.owner_user_id\n",
+    "                         ORDER BY number_of_answers DESC\n",
+    "                        \"\"\"\n",
+    "\n",
+    "# Set up the query\n",
+    "safe_config = bigquery.QueryJobConfig(maximum_bytes_billed=10**10)\n",
+    "bigquery_experts_query_job = client.query(bigquery_experts_query, job_config = safe_config) \n",
+    "#bigquery_experts_query_job = client.query(bigquery_experts_query) \n",
+    "\n",
+    "# API request - run the query, and return a pandas DataFrame , bigquery_experts_results\n",
+    "#bigquery_experts_results = bigquery_experts_query_job.to_dataframe() # Your code goes here\n",
+    "df = bigquery_experts_query_job.to_dataframe() \n",
+    "print(df)\n",
+    "bigquery_experts_results = pd.DataFrame(df)\n",
+    "bigquery_experts_query   = bigquery_experts_query\n",
+    "\n",
+    "#fix by chatgpt\n",
+    "#bigquery_experts_results = bigquery_experts_results[bigquery_experts_results['user_id'].notna()]\n",
+    "#bigquery_experts_results['user_id'] = pd.to_numeric(bigquery_experts_results['user_id'], errors='coerce')\n",
+    "bigquery_experts_results = bigquery_experts_results.dropna(subset=['user_id'])\n",
+    "#bigquery_experts_results['user_id'] = bigquery_experts_results['user_id'].astype(int)\n",
+    "#bigquery_experts_results = bigquery_experts_results.sort_values(by='user_id').reset_index(drop=True)\n",
+    "#submitted_ids = bigquery_experts_results.loc[bigquery_experts_results.user_id.notna(), \"user_id\"].unique()\n",
+    "#submitted_ids_count = len(submitted_ids)\n",
+    "#print(submitted_ids_count)\n",
+    "\"\"\"\n",
+    "# from ex6, bigquery_experts_answer\n",
+    "bigquery_experts_answer = bigquery_experts_query_job.to_dataframe()\n",
+    "\n",
+    "# check 1: words appear in query\n",
+    "lower_query = bigquery_experts_query.lower()\n",
+    "assert ('group by' in lower_query), ('Your query should have a **GROUP BY** clause.')\n",
+    "assert ('count' in lower_query), ('Your query should have a **COUNT** in the **SELECT** statement.')\n",
+    "assert ('%bigquery' in lower_query), ('Your **WHERE** clause is not filtering on the \"bigquery\" tag correctly.')\n",
+    "\n",
+    "# check 2: column names\n",
+    "bigquery_experts_results.columns = [c.lower() for c in bigquery_experts_results.columns]\n",
+    "assert ('user_id' in bigquery_experts_results.columns), ('You do not have a `user_id` column in your results.')\n",
+    "assert ('number_of_answers' in bigquery_experts_results.columns), ('You do not have a `number_of_answers` column in your results.')\n",
+    "\n",
+    "# check 3: correct user IDs\n",
+    "correct_ids = bigquery_experts_answer.loc[bigquery_experts_answer.user_id.notna(), \"user_id\"].unique()\n",
+    "submitted_ids = bigquery_experts_results.loc[bigquery_experts_results.user_id.notna(), \"user_id\"].unique()\n",
+    "correct_ids_count = len(correct_ids)\n",
+    "submitted_ids_count = len(submitted_ids)\n",
+    "# Print the counts\n",
+    "print(\"# check 3:Total correct_ids count:\", correct_ids_count)\n",
+    "print(\"# check 3:Total submitted_ids count:\", submitted_ids_count)\n",
+    "assert np.array_equal(correct_ids, submitted_ids), 'SHRI : You seem to have the wrong values in the `user_id` column.'\n",
+    "\n",
+    "\n",
+    "# check 4: check one value from other column\n",
+    "first_id = list(bigquery_experts_answer[\"user_id\"])[0]\n",
+    "correct_num = int(bigquery_experts_answer[bigquery_experts_answer[\"user_id\"] == first_id][\"number_of_answers\"])\n",
+    "submitted_num = int(bigquery_experts_results[bigquery_experts_results[\"user_id\"] == first_id][\"number_of_answers\"])\n",
+    "assert (correct_num == submitted_num), ('The values in the `number_of_answers` column appear to be incorrect.')\n",
+    "assert np.array_equal(correct_ids, submitted_ids), 'You seem to have the wrong values in the `user_id` column.'\n",
+    "\"\"\"\n",
+    "\n",
+    "print(bigquery_experts_results.head())\n",
+    "\n",
+    "# Check your answer (assuming you have a check method implemented elsewhere)\n",
+    "q_5.check()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "260d1ae9",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008148,
+     "end_time": "2025-01-09T19:16:28.966662",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:28.958514",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For a hint or the solution, uncomment the appropriate line below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "0a349cb8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:28.985016Z",
+     "iopub.status.busy": "2025-01-09T19:16:28.984659Z",
+     "iopub.status.idle": "2025-01-09T19:16:28.988745Z",
+     "shell.execute_reply": "2025-01-09T19:16:28.987579Z"
+    },
+    "papermill": {
+     "duration": 0.015763,
+     "end_time": "2025-01-09T19:16:28.990775",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:28.975012",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "#q_5.hint()\n",
+    "#q_5.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7b7dfcbc",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008248,
+     "end_time": "2025-01-09T19:16:29.007845",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:28.999597",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### 6) Building a more generally useful service\n",
+    "\n",
+    "How could you convert what you've done to a general function a website could call on the backend to get experts on any topic?  \n",
+    "\n",
+    "Think about it and then check the solution below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "81e92445",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-01-09T19:16:29.026408Z",
+     "iopub.status.busy": "2025-01-09T19:16:29.025963Z",
+     "iopub.status.idle": "2025-01-09T19:16:29.033683Z",
+     "shell.execute_reply": "2025-01-09T19:16:29.032513Z"
+    },
+    "papermill": {
+     "duration": 0.018764,
+     "end_time": "2025-01-09T19:16:29.035422",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:29.016658",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "application/javascript": [
+       "parent.postMessage({\"jupyterEvent\": \"custom.exercise_interaction\", \"data\": {\"interactionType\": 3, \"questionType\": 4, \"questionId\": \"6_AllRidesInTheMorning\", \"learnToolsVersion\": \"0.3.4\", \"valueTowardsCompletion\": 0.0, \"failureMessage\": \"\", \"exceptionClass\": \"\", \"trace\": \"\", \"outcomeType\": 4}}, \"*\")"
+      ],
+      "text/plain": [
+       "<IPython.core.display.Javascript object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/markdown": [
+       "<span style=\"color:#33cc99\">Solution:</span> \n",
+       "The results show rides with hours 1-12. But there should be results in the afternoon (hours 13-24).\n",
+       "\n",
+       "Perhaps the raw data has lost the distinction between AM and PM values.\n",
+       "\n",
+       "You can review 200 rows of the raw data with the commands: \n",
+       "```python\n",
+       "# Construct a reference to the \"taxi_trips\" table\n",
+       "table_ref = dataset_ref.table(\"taxi_trips\")\n",
+       "\n",
+       "# API request - fetch the table\n",
+       "table = client.get_table(table_ref)\n",
+       "\n",
+       "# Preview the first five lines of the \"taxi_trips\" table\n",
+       "client.list_rows(table, max_results=200).to_dataframe()\n",
+       "```\n",
+       "\n",
+       "You'll see that the timestamps are all in the AM hours (hours are less than or equal to 12.) \n",
+       "\n",
+       "At first you might worry that the data is coming back sorted by time, but the variety of dates suggests that's not the case. \n",
+       "Part of data science is tracking down exactly this type of problem. If you were in an organization working on this, you could show the evidence you've just collected (e.g. the breakdown of trips by hour) to someone responsible for collecting the data, and help them debug the data collection and storage process.\n"
+      ],
+      "text/plain": [
+       "Solution: \n",
+       "The results show rides with hours 1-12. But there should be results in the afternoon (hours 13-24).\n",
+       "\n",
+       "Perhaps the raw data has lost the distinction between AM and PM values.\n",
+       "\n",
+       "You can review 200 rows of the raw data with the commands: \n",
+       "```python\n",
+       "# Construct a reference to the \"taxi_trips\" table\n",
+       "table_ref = dataset_ref.table(\"taxi_trips\")\n",
+       "\n",
+       "# API request - fetch the table\n",
+       "table = client.get_table(table_ref)\n",
+       "\n",
+       "# Preview the first five lines of the \"taxi_trips\" table\n",
+       "client.list_rows(table, max_results=200).to_dataframe()\n",
+       "```\n",
+       "\n",
+       "You'll see that the timestamps are all in the AM hours (hours are less than or equal to 12.) \n",
+       "\n",
+       "At first you might worry that the data is coming back sorted by time, but the variety of dates suggests that's not the case. \n",
+       "Part of data science is tracking down exactly this type of problem. If you were in an organization working on this, you could show the evidence you've just collected (e.g. the breakdown of trips by hour) to someone responsible for collecting the data, and help them debug the data collection and storage process."
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# Check your answer (Run this code cell to receive credit!)\n",
+    "q_6.solution()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c04d9457",
+   "metadata": {
+    "papermill": {
+     "duration": 0.009032,
+     "end_time": "2025-01-09T19:16:29.053985",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:29.044953",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Congratulations!\n",
+    "\n",
+    "You know all the key components to use BigQuery and SQL effectively. Your SQL skills are sufficient to unlock many of the world's largest datasets.\n",
+    "\n",
+    "Want to go play with your new powers?  Kaggle has BigQuery datasets available [here](https://www.kaggle.com/datasets?fileType=bigQuery)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7ac493de",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00865,
+     "end_time": "2025-01-09T19:16:29.071735",
+     "exception": false,
+     "start_time": "2025-01-09T19:16:29.063085",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "---\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "*Have questions or comments? Visit the [course discussion forum](https://www.kaggle.com/learn/intro-to-sql/discussion) to chat with other learners.*"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "datasetId": 22685,
+     "sourceId": 337535,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 99.347722,
+   "end_time": "2025-01-09T19:16:30.304602",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2025-01-09T19:14:50.956880",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
